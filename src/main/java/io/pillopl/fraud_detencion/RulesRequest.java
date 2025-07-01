@@ -5,6 +5,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static io.pillopl.fraud_detencion.RuleDependency.Type.NeedsData;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toSet;
 
@@ -23,9 +24,9 @@ record RulesRequest(Set<RequestedRule<?>> requestedRules) {
 
     RulesConfig createConfig() {
         if (!isValid()) {
-            return new RulesConfig(new HashSet<>());
+            return new RulesConfig(new ArrayList<>());
         }
-        Set<Rule> rules = new HashSet<>();
+        List<Rule> rules = new ArrayList<>();
         Set<String> usedIds = new HashSet<>();
 
         rules.addAll(nonQueriedRules(usedIds));
@@ -41,19 +42,19 @@ record RulesRequest(Set<RequestedRule<?>> requestedRules) {
 
     }
 
-    private Set<Rule> nonQueriedRules(Set<String> usedIds) {
-        Set<Rule> rules = new HashSet<>();
+    private List<Rule> nonQueriedRules(Set<String> usedIds) {
+        List<Rule> rules = new ArrayList<>();
         List<NonQueriedRule> list = requestedRules.stream().filter(r -> r.query().isEmpty()).map(r -> new NonQueriedRule(r.id(), (ScoreCheck<Map<String, String>>) r.scoreCheck())).toList();
         rules.addAll(list);
         usedIds.addAll(list.stream().map(NonQueriedRule::id).toList());
         return rules;
     }
 
-    private Set<Rule> groupDependentQueriedRules(Set<String> usedIds) {
+    private List<Rule> groupDependentQueriedRules(Set<String> usedIds) {
         //TODO: does not support chains yet
-        Set<Rule> rules = new HashSet<>();
+        List<Rule> rules = new ArrayList<>();
         Set<RequestedRule<?>> rulesWithDependency = fitlerUsedIds(usedIds)
-                .stream().filter(r -> r.dependsOn() != null).collect(toSet());
+                .stream().filter(r -> r.dependsOn() != null && r.dependsOn().type().equals(NeedsData)).collect(toSet());
         for (RequestedRule<?> rule : rulesWithDependency) {
             Optional<RequestedRule<?>> poteniallyDependentOn = requestedRules.stream().filter(r -> r.id().equals(rule.dependsOn().dependentOnRule())).findFirst();
             if (poteniallyDependentOn.isPresent()) {
@@ -70,8 +71,8 @@ record RulesRequest(Set<RequestedRule<?>> requestedRules) {
         return rules;
     }
 
-    private Set<Rule> groupBySameDataSource(Set<String> usedIds) {
-        Set<Rule> rules = new HashSet<>();
+    private List<Rule> groupBySameDataSource(Set<String> usedIds) {
+        List<Rule> rules = new ArrayList<>();
         Map<String, Map<String, List<RequestedRule<?>>>> rulesGroupedByDataSourceAndView =
                 requestedRules.stream()
                         .filter(rule -> rule.query().isPresent())
@@ -109,11 +110,11 @@ record RulesRequest(Set<RequestedRule<?>> requestedRules) {
         return requestedRules.stream().filter(r -> !usedIds.contains(r.id())).collect(toSet());
     }
 
-    private Set<Rule> doesNotGroupQueriedRules(Set<String> usedIds) {
+    private List<Rule> doesNotGroupQueriedRules(Set<String> usedIds) {
         Set<RequestedRule<?>> rest = fitlerUsedIds(usedIds);
-        List<QueriedRule<Object>> simpleQueriedRule = rest.stream().map(rule -> new QueriedRule<>(rule.id(), rule.scoreCheck(), rule.query().get())).toList();
+        List<QueriedRule<Object>> simpleQueriedRule = rest.stream().map(rule -> new QueriedRule<>(rule.id(), rule.scoreCheck(), rule.query().get())).toList(); //sort po ewentualnym priorytecie
         usedIds.addAll(rest.stream().map(RequestedRule::id).toList());
-        return new HashSet<>(simpleQueriedRule);
+        return new ArrayList<>(simpleQueriedRule);
     }
 
 }
@@ -124,8 +125,7 @@ record RequestedRule<T>(String id, Optional<Query<T>> query, ScoreCheck<T> score
 
 }
 
-record RuleSource(String datasource, String view) {
-};
+record RuleSource(String datasource, String view) { }
 
 record RuleDependency<T>(String dependentOnRule, Type type, Predicate<T> condition,
                          Function<T, Map<String, String>> transmiter) {
@@ -135,14 +135,7 @@ record RuleDependency<T>(String dependentOnRule, Type type, Predicate<T> conditi
     }
 
     enum Type {
-        Forced, NeedsData
-    }
-}
-
-class RulesConfigRepo {
-
-    RulesConfig findConfig() {
-        return null;
+        NeedsData
     }
 }
 
@@ -167,7 +160,6 @@ class Graf<N, E> {
     boolean hasCycles() {
         Set<N> visited = new HashSet<>();
         Set<N> onPath = new HashSet<>();
-
         for (N node : adjacencyList.keySet()) {
             if (!visited.contains(node)) {
                 if (dfs(node, visited, onPath)) {

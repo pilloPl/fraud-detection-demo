@@ -62,7 +62,7 @@ class SimulationTest {
 
         // When
         int total = Simulation.of(List.of(a, b, c))
-                .and(new ExecutionStrategy(0, 10, 1))
+                .and(new ExecutionStrategy(0, 10, 0))
                 .after(Duration.ofMillis(500))
                 .andParallelizationOf(2)
                 .runWith(stats).totalScore();

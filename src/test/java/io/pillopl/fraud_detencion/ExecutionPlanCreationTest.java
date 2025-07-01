@@ -12,7 +12,7 @@ import static io.pillopl.fraud_detencion.RulesStats.empty;
 import static java.time.Duration.ofMillis;
 import static org.junit.jupiter.api.Assertions.*;
 
-class ExectionPlanCreationTest {
+class ExecutionPlanCreationTest {
 
     @Test
     void testGreedySortByCost() {
@@ -20,11 +20,11 @@ class ExectionPlanCreationTest {
         Rule a = new TestRule("A");
         Rule b = new TestRule("B");
 
-        ExecutionConfig config = new ExecutionConfig(new ExecutionStrategy(1, 0, 0), new RulesConfig(Set.of(a, b)), empty());
+        ExecutionConfig config = new ExecutionConfig(new ExecutionStrategy(1, 0, 0), new RulesConfig(List.of(a, b)), empty());
 
         config.handle(new RulesExecuted(List.of(
-                executionOf("X").took(ofMillis(300)).scored(new Score(5)).costed(5).build(),
-                executionOf("Y").took(ofMillis(100)).scored(new Score(5)).costed(5).build()
+                executionOf("A").took(ofMillis(300)).scored(new Score(5)).costed(50).build(),
+                executionOf("B").took(ofMillis(100)).scored(new Score(5)).costed(5).build()
         )));
 
         // When
@@ -39,7 +39,7 @@ class ExectionPlanCreationTest {
         // Given
         Rule x = new TestRule("X");
         Rule y = new TestRule("Y");
-        ExecutionConfig config = new ExecutionConfig(new ExecutionStrategy(0, 1, 0), new RulesConfig(Set.of(x, y)), empty());
+        ExecutionConfig config = new ExecutionConfig(new ExecutionStrategy(0, 1, 0), new RulesConfig(List.of(x, y)), empty());
 
         // And
         config.handle(new RulesExecuted(List.of(
@@ -60,7 +60,7 @@ class ExectionPlanCreationTest {
         Rule x = new TestRule("X");
         Rule y = new TestRule("Y");
 
-        ExecutionConfig config = new ExecutionConfig(new ExecutionStrategy(0, 0, 1), new RulesConfig(Set.of(x, y)), empty());
+        ExecutionConfig config = new ExecutionConfig(new ExecutionStrategy(0, 0, 1), new RulesConfig(List.of(x, y)), empty());
 
         // And
         config.handle(new RulesExecuted(List.of(
@@ -85,7 +85,7 @@ class ExectionPlanCreationTest {
         Rule e = new TestRule("E");
         Rule f = new TestRule("F");
 
-        ExecutionConfig config = new ExecutionConfig(new ExecutionStrategy(2, 1, 3), new RulesConfig(Set.of(a, b, c, d, e, f)), empty());
+        ExecutionConfig config = new ExecutionConfig(new ExecutionStrategy(2, 1, 3), new RulesConfig(List.of(a, b, c, d, e, f)), empty());
 
         // And
         config.handle(new RulesExecuted(List.of(

@@ -72,7 +72,7 @@ class Simulation {
     private int parallelism;
 
     private Simulation(List<Rule> rules) {
-        this.rules = new RulesConfig(new HashSet<>(rules));
+        this.rules = new RulesConfig(rules);
     }
 
     public static Simulation of(List<Rule> rules) {

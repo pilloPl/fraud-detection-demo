@@ -101,7 +101,7 @@ class ConfigCreationTest {
                 .id("A")
                 .query(() -> "data", "db1", "view1")
                 .scoreCheck(check)
-                .dependsOn("B", RuleDependency.Type.Forced)
+                .dependsOn("B", NeedsData)
                 .build();
 
         RequestedRule<String> b = RequestedRuleBuilder.<String>create()
@@ -170,7 +170,7 @@ class ConfigCreationTest {
         RulesConfig config = request.createConfig();
 
         // Then
-        Set<Rule> result = config.rules();
+        List<Rule> result = config.rules();
         assertEquals(4, result.size());
 
         assertTrue(result.stream().anyMatch(r -> r instanceof SingleSourceQueriedRule<?>),

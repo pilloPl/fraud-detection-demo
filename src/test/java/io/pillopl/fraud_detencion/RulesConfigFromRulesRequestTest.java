@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
-import static io.pillopl.fraud_detencion.RuleDependency.Type.Forced;
 import static io.pillopl.fraud_detencion.RuleDependency.Type.NeedsData;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,7 +27,7 @@ class RulesConfigFromRulesRequestTest {
     void testSimpleLinearDependencyIsValid() {
         // Given
         RequestedRule<?> a = createRule("A");
-        RequestedRule<?> b = createRule("B", new RuleDependency("A", Forced));
+        RequestedRule<?> b = createRule("B", new RuleDependency("A", NeedsData));
         RulesRequest config = new RulesRequest(Set.of(a, b));
 
         // When
@@ -41,9 +40,9 @@ class RulesConfigFromRulesRequestTest {
     @Test
     void testCycleDependencyIsInvalid() {
         // Given
-        RequestedRule<?> a = createRule("A", new RuleDependency("C", Forced));
+        RequestedRule<?> a = createRule("A", new RuleDependency("C", NeedsData));
         RequestedRule<?> b = createRule("B", new RuleDependency("A", NeedsData));
-        RequestedRule<?> c = createRule("C", new RuleDependency("B", Forced));
+        RequestedRule<?> c = createRule("C", new RuleDependency("B", NeedsData));
         RulesRequest config = new RulesRequest(Set.of(a, b, c));
 
         // When
@@ -57,7 +56,7 @@ class RulesConfigFromRulesRequestTest {
     void testDisconnectedComponentsValid() {
         // Given
         RequestedRule<?> a = createRule("A");
-        RequestedRule<?> b = createRule("B", new RuleDependency("A", Forced));
+        RequestedRule<?> b = createRule("B", new RuleDependency("A", NeedsData));
         RequestedRule<?> x = createRule("X");
         RequestedRule<?> y = createRule("Y", new RuleDependency("X", NeedsData));
         RulesRequest config = new RulesRequest(Set.of(a, b, x, y));
@@ -72,7 +71,7 @@ class RulesConfigFromRulesRequestTest {
     @Test
     void testSelfLoopIsInvalid() {
         // Given
-        RequestedRule<?> a = createRule("A", new RuleDependency("A", Forced));
+        RequestedRule<?> a = createRule("A", new RuleDependency("A", NeedsData));
         RulesRequest config = new RulesRequest(Set.of(a));
 
         // When
