@@ -7,12 +7,34 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-class GenericRule<T> implements Rule {
+public interface Rule {
+    Score calculate(Map<String, String> params);
 
+    default Score calculateAndMeasure(Map<String, String> params) {
+        Long start = System.nanoTime();
+        Score score = calculate(params);
+        Long end = System.nanoTime();
+        System.out.println("Elapsed time of " + this.getClass() + ": " + Duration.ofNanos(end - start).toMillis());
+        return score;
+    }
+
+    String id();
+}
+
+class QueriedRule<T> implements Rule {
+
+    final String id;
     final ScoreCheck<T> check;
     final Query<T> query;
 
-    GenericRule(Predicate<T> check, Query<T> query, Score score) {
+    QueriedRule(String id, ScoreCheck check, Query query) {
+        this.id = id;
+        this.check = check;
+        this.query = query;
+    }
+
+    QueriedRule(String id, Predicate<T> check, Query<T> query, Score score) {
+        this.id = id;
         this.check = data -> {
             if (check.test(data)) {
                 return score;
@@ -27,14 +49,43 @@ class GenericRule<T> implements Rule {
         T result = query.measureAndExecute(params);
         return check.scoreOver(result);
     }
+
+    @Override
+    public String id() {
+        return id;
+    }
 }
 
-class SingleSourceRule<T> implements Rule {
+class NonQueriedRule implements Rule {
 
+    final String id;
+    final ScoreCheck<Map<String, String>> check;
+
+    NonQueriedRule(String id, ScoreCheck<Map<String, String>> check) {
+        this.id = id;
+        this.check = check;
+    }
+
+    @Override
+    public Score calculate(Map<String, String> params) {
+        return check.scoreOver(params);
+    }
+
+    @Override
+    public String id() {
+        return id;
+    }
+}
+
+//a co jak jeden scorecheck potrzebuje dodatkowego zrodla?
+class SingleSourceQueriedRule<T> implements Rule {
+
+    private final String id;
     private final List<ScoreCheck<T>> checks;
     private final Query<T> query;
 
-    SingleSourceRule(List<ScoreCheck<T>> checks, Query<T> query) {
+    SingleSourceQueriedRule(String id, List<ScoreCheck<T>> checks, Query<T> query) {
+        this.id = id;
         this.checks = checks;
         this.query = query;
     }
@@ -49,16 +100,23 @@ class SingleSourceRule<T> implements Rule {
         }
         return score;
     }
+
+    @Override
+    public String id() {
+        return id;
+    }
 }
 
 class DependentRule<T, P> implements Rule {
 
-    private final GenericRule<T> source;
-    private final GenericRule<P> sink;
-    private final Predicate<T> condition;
+    private final String id;
+    private final QueriedRule<T> source;
+    private final QueriedRule<P> sink;
+    private final Predicate<T> condition; //todo - a co jak to jest kosztowne czasowo?
     private final Function<T, Map<String, String>> transmiter;
 
-    DependentRule(GenericRule<T> source, GenericRule<P> sink, Predicate<T> condition, Function<T, Map<String, String>> transmiter) {
+    DependentRule(String id, QueriedRule<T> source, QueriedRule<P> sink, Predicate<T> condition, Function<T, Map<String, String>> transmiter) {
+        this.id = id;
         this.source = source;
         this.sink = sink;
         this.condition = condition;
@@ -80,17 +138,10 @@ class DependentRule<T, P> implements Rule {
         }
         return score;
     }
-}
 
-interface Rule {
-    Score calculate(Map<String, String> params);
-
-    default Score calculateAndMeasure(Map<String, String> params) {
-        Long start = System.nanoTime();
-        Score score = calculate(params);
-        Long end = System.nanoTime();
-        System.out.println("Elapsed time of " + this.getClass() + ": " + Duration.ofNanos(end - start).toMillis());
-        return score;
+    @Override
+    public String id() {
+        return id;
     }
 }
 
@@ -104,6 +155,8 @@ interface Query<T> {
         System.out.println("Elapsed time of " + this.getClass() + ": " + Duration.ofNanos(end - start).toMillis());
         return execute;
     }
+
+    RuleSource ruleSource();
 }
 
 interface ScoreCheck<T> {

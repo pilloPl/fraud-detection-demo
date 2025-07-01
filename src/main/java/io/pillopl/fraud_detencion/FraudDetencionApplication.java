@@ -35,9 +35,9 @@ public class FraudDetencionApplication {
         try {
             testRules(1, 200000, "user_1231", "Firefox", "device_56648", "email"); //warmup
             System.out.println("-----");
-            testRules(2, 20000, "user_1234", "Firefox2", "device_56641", "email");
-            testRules(3, 20000, "user_1234", "Firefox2", "device_56641", "email");
-            testRules(4, 20000, "user_1234", "Firefox2", "device_56641", "bad@mail.com");
+            testRules(2, 200, "user_1234", "Firefox2", "device_56641", "email");
+            testRules(3, 209, "user_1234", "Firefox2", "device_56641", "email");
+            testRules(4, 200, "user_1234", "Firefox2", "device_56641", "bad@mail.com");
         } finally {
             executors.shutdown();
         }
@@ -63,23 +63,23 @@ public class FraudDetencionApplication {
 
     private List<Rule> loadRules() {
         Transactions transactions = new Transactions(jdbcTemplate);
-        GenericRule<Boolean> emailOnBlacklist = new GenericRule<>(
+        QueriedRule<Boolean> emailOnBlacklist = new QueriedRule<>("emailOnBlacklist",
                 result -> result != null && result, new EmailOnBlacklist(redisTemplate),
                 Score.of(100));
-        GenericRule<Double> userAgentAnomaly = new GenericRule<>(
+        QueriedRule<Double> userAgentAnomaly = new QueriedRule<>("userAgentAnomaly",
                 data -> data <= 0.3d,
                 new UserAgentPercentageUsageQuery(jdbcTemplate),
                 Score.of(40));
-        GenericRule<Integer> deviceUsedByLogins = new GenericRule<>(
+        QueriedRule<Integer> deviceUsedByLogins = new QueriedRule<>("deviceUsedByLogins",
                 data -> data >= 30,
                 new DeviceUsedByUsers(jdbcTemplate),
                 Score.of(20));
-        SingleSourceRule<TransactionsView> transactionsChecks = new SingleSourceRule<>(
+        SingleSourceQueriedRule<TransactionsView> transactionsChecks = new SingleSourceQueriedRule<>("transactionsChecks",
                 List.of(
                         data -> data.average() >= 300d ? Score.of(10) : Score.zero(),
                         data -> data.total() >= 300000d ? Score.of(30) : Score.zero()),
                 transactions);
-        DependentRule<Double, Integer> loginThenTransactionRule = new DependentRule<>(
+        DependentRule<Double, Integer> loginThenTransactionRule = new DependentRule<>("loginThenTransactionRule",
                 userAgentAnomaly,
                 deviceUsedByLogins,
                 percent -> percent >= 0.1d,
@@ -93,7 +93,7 @@ public class FraudDetencionApplication {
         AtomicInteger totalScore = new AtomicInteger(0);
 
         CompletableFuture<Void> combined = allOf(
-                rules.stream()
+                rules.stream() //zapewnic kolejnosc przekazywabnia zadan do kolejki - np za pomoca zwyklego for
                         .map(r -> supplyAsync(() -> {
                             Score calculate = r.calculateAndMeasure(params);
                             totalScore.addAndGet(calculate.score());

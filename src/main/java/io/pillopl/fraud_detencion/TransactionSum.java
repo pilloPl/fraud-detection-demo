@@ -1,9 +1,8 @@
 package io.pillopl.fraud_detencion;
 
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.rowset.SqlRowSet;
+import org.springframework.jdbc.core.RowMapper;
 
-import java.util.List;
 import java.util.Map;
 
 class TransactionSum implements Query<Double> {
@@ -19,6 +18,11 @@ class TransactionSum implements Query<Double> {
         TransactionsView view = transactions.execute(params);
         System.out.println("🟢 Suma transakcji: " + view.total());
         return view.total();
+    }
+
+    @Override
+    public RuleSource ruleSource() {
+        return null;
     }
 
 
@@ -39,9 +43,38 @@ class TransactionAvg implements Query<Double> {
         return view.average();
     }
 
+    @Override
+    public RuleSource ruleSource() {
+        return null;
+    }
+
 
 }
 
+
+abstract class CachedJdbcQuery<T> implements Query<T> {
+
+    private final JdbcTemplate jdbcTemplate;
+    private final String sql;
+    private final RowMapper<T> rowMapper;
+    private T result;
+
+    CachedJdbcQuery(JdbcTemplate jdbcTemplate, String sql, RowMapper<T> rowMapper) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.sql = sql;
+        this.rowMapper = rowMapper;
+    }
+
+    @Override
+    public T execute(Map<String, String> params) {
+        if (result != null) {
+            return result;
+        }
+        result = jdbcTemplate.queryForObject(sql, rowMapper);
+        return result;
+    }
+
+}
 
 class Transactions implements Query<TransactionsView> {
 
@@ -65,6 +98,11 @@ class Transactions implements Query<TransactionsView> {
                 )
         );
         return cached;
+    }
+
+    @Override
+    public RuleSource ruleSource() {
+        return null;
     }
 
     private String build(String userId) {

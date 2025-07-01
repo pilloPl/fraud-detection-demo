@@ -26,6 +26,11 @@ class DeviceUsedByUsers implements Query<Integer> {
         });
     }
 
+    @Override
+    public RuleSource ruleSource() {
+        return null;
+    }
+
     private String build(String deviceId) {
         return  "SELECT " +
                 "  count(DISTINCT user_id) AS user_count " +

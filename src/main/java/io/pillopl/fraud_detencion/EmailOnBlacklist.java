@@ -20,6 +20,11 @@ class EmailOnBlacklist implements Query<Boolean> {
         return email;
     }
 
+    @Override
+    public RuleSource ruleSource() {
+        return new RuleSource("redis", "emails");
+    }
+
 
 }
 

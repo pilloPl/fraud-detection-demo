@@ -29,6 +29,11 @@ class UserAgentPercentageUsageQuery implements Query<Double> {
         });
     }
 
+    @Override
+    public RuleSource ruleSource() {
+        return null;
+    }
+
     private String build(String userId, String userAgent) {
         return "WITH " +
                 "  total AS ( " +
